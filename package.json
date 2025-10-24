@@ -1,0 +1,23 @@
+{
+  "name": "idc-core",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "Ivan Johannes",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "handlebars": "^4.7.8",
+    "ioredis": "^5.8.1",
+    "jsonata": "^2.1.0",
+    "mongodb": "^6.20.0",
+    "redlock": "^5.0.0-beta.2",
+    "uuid": "^13.0.0"
+  }
+}

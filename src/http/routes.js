@@ -1,10 +1,12 @@
 import express from "express";
 import { action_controller, ping_controller, task_controller } from "./controllers.js";
+import { attachClientSettings } from "./middleware.js";
 
 const router = express.Router();
 
 // MIDDLEWARE
 router.use(express.json());
+router.use(attachClientSettings)
 // END MIDDLEWARE
 
 // ROUTES

@@ -2,7 +2,8 @@ import { Db } from "mongodb";
 
 /**
  * @typedef {object} ExecutionContext
- * @property {string} [client_id]
+ * @property {object} client_settings
+ * @property {string} [client_settings.client_id]
  * @property {Db} [mongodb]
  * @property {Array<Function>} [on_error_callbacks]
  */

@@ -5,7 +5,7 @@ export async function ping_controller(req, res) {
   try {
     console.log("🟢 - Ping received");
 
-    res.status(200).send("pong");
+    res.status(200).send("idc-core is alive!");
   } catch (err) {
     console.error("🔴 - Error occurred in ping_controller:", err);
     res.status(500).json({ error: err.message });
@@ -37,6 +37,11 @@ export async function task_controller(req, res) {
 
 export async function action_controller(req, res) {
   try {
+    const client_settings = req.client_settings;
+    if (!client_settings?.client_id) {
+      throw "no client_id";
+    }
+
     // check that there is an action_definition in the body
     if (!req.body?.action_definition)
       return res.status(400).json({ error: "No action_definition provided in request body" });
@@ -47,9 +52,9 @@ export async function action_controller(req, res) {
     // build a execution_context
     const execution_context = {};
 
-    // TODO: implement logic to determine the right db
-    execution_context.client_id = "public";
-    execution_context.mongodb = mongodb_client.db(execution_context.client_id);
+    // populate execution_context
+    execution_context.client_settings = client_settings;
+    execution_context.mongodb = mongodb_client.db(execution_context.client_settings.client_id);
 
     action_context.action_definition = req.body.action_definition;
 

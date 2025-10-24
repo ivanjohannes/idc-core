@@ -95,7 +95,7 @@ export default async function (action_context, execution_context) {
       const evaluated_task_definition = action_context.evaluated_tasks_definitions[task_name];
       const task_function = evaluated_task_definition.function;
 
-      const exchange_name = `idc-tasks.${execution_context.client_id}.${task_function}`;
+      const exchange_name = `idc-tasks.${execution_context.client_settings.client_id}.${task_function}`;
       fanout_publish(
         exchange_name,
         JSON.stringify({

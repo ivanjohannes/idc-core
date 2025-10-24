@@ -5,6 +5,9 @@ dotenv.config({
 
 export default {
   show_timer_logs: process.env.SHOW_TIMER_LOGS === "true",
+  idc_gateway: {
+    url: process.env.IDC_GATEWAY_URL,
+  },
   mongodb: {
     url: process.env.MONGODB_CLIENT_URL,
   },

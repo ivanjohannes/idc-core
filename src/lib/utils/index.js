@@ -171,7 +171,7 @@ export async function evaluateTemplate(template, context) {
  * @returns {Function}
  */
 export function executeWithRedisLock(lock_key, execution_context, func) {
-  const resource_key = `${execution_context.client_id}:locks:${lock_key}`;
+  const resource_key = `${execution_context.client_settings.client_id}:locks:${lock_key}`;
   const lock_ttl_ms = 10000; // 10 seconds
 
   return async function (...args) {
@@ -191,7 +191,7 @@ export function executeWithRedisLock(lock_key, execution_context, func) {
       throw err;
     } finally {
       clearInterval(interval);
-      await lock.release();
+      await lock.unlock();
     }
   };
 }

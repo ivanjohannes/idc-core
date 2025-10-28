@@ -50,16 +50,13 @@ export function extractCollectionNameFromIdcID(idc_id) {
 
 /**
  * @description Function to create a new version document
- * @param {string} document_idc_id - The document idc_id
+ * @param {import("mongodb").Document} document - The document to create a version for.
  * @param {import("../types/index.js").ActionContext} action_context - The action context containing the MongoDB instance and the idc_id.
  * @param {import("../types/index.js").ExecutionContext} execution_context - The tech stack containing the MongoDB instance.
  * @returns {Promise<object>} - The result of the version creation and update.
  */
-export async function saveDocumentVersion(document_idc_id, action_context, execution_context) {
-  const collection_name = extractCollectionNameFromIdcID(document_idc_id);
+export async function saveDocumentVersion(document, action_context, execution_context) {
   const versions_collection_name = "idc-versions";
-
-  const document = await execution_context.mongodb.collection(collection_name).findOne({ idc_id: document_idc_id });
 
   if (!document) {
     throw "Cannot save document version: Document not found";
@@ -68,60 +65,32 @@ export async function saveDocumentVersion(document_idc_id, action_context, execu
   // create the version document
   const version_idc_id = await generateIdcID(versions_collection_name, execution_context);
   const version_doc = {
-    idc_id: version_idc_id,
     document_idc_id: document.idc_id,
+    idc_version: document.idc_version,
+    from_idc_version: document.from_idc_version,
     action_idc_id: action_context.idc_id,
     document,
     createdAt: new Date(),
   };
-  await execution_context.mongodb.collection(versions_collection_name).insertOne(version_doc);
-
-  return {
-    idc_id: version_idc_id,
-  };
-}
-
-/**
- * @description Revert a document version by number of steps back
- * @param {string} document_idc_id - The IDC ID of the document to revert.
- * @param {number} idc_version - The version number to revert to.
- * @param {import("../types/index.js").ActionContext} action_context - The action context containing the MongoDB instance.
- * @param {import("../types/index.js").ExecutionContext} execution_context - The tech stack containing the MongoDB instance.
- * @returns {Promise<object>} - The result of the version revert.
- */
-export async function revertDocumentVersion(document_idc_id, idc_version, action_context, execution_context) {
-  const collection_name = extractCollectionNameFromIdcID(document_idc_id);
-  const versions_collection_name = "idc-versions";
-
-  let version_doc;
-  if (idc_version) {
-    version_doc = await execution_context.mongodb
-      .collection(versions_collection_name)
-      .findOne({ document_idc_id, "document.idc_version": idc_version });
-  } else {
-    version_doc = await execution_context.mongodb
-      .collection(versions_collection_name)
-      .findOne({ document_idc_id }, { sort: { "document.idc_version": -1 } });
-  }
-
-  if (!version_doc) {
-    throw `Cannot revert document version: Version number ${idc_version} not found for document ${document_idc_id}`;
-  }
-
-  // revert the document to the version
-  const updated_document = await execution_context.mongodb.collection(collection_name).findOneAndUpdate(
-    { idc_id: document_idc_id },
+  await execution_context.mongodb.collection(versions_collection_name).findOneAndUpdate(
     {
-      $set: version_doc.document,
+      document_idc_id: document.idc_id,
+      idc_version: document.idc_version,
     },
     {
-      returnDocument: "after",
+      $set: version_doc,
+      $setOnInsert: {
+        idc_id: version_idc_id,
+      },
+    },
+    {
       upsert: true,
+      returnDocument: "after",
     }
   );
 
   return {
-    document: updated_document,
+    idc_id: version_idc_id,
   };
 }
 
@@ -191,7 +160,7 @@ export function executeWithRedisLock(lock_key, execution_context, func) {
       throw err;
     } finally {
       clearInterval(interval);
-      await lock.unlock();
+      await redlock.release(lock)
     }
   };
 }

@@ -8,5 +8,5 @@
  * @returns {Promise<object>} - Throws an error.
  */
 export default async function (task_definition, task_metrics, task_results, action_context, execution_context) {
-    throw "Simulated task error";
+    throw "Task error";
 }

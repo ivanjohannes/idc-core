@@ -53,20 +53,25 @@ export default async function (action_context, execution_context) {
 
     // set tasks_results to {}
     action_context.tasks_results = {};
-    action_context.evaluated_tasks_definitions = {};
+    execution_context.evaluated_tasks_definitions = {};
 
     // execute tasks_definitions in order
     for (const task_definition of ordered_task_definitions) {
-      const task_timer = precisionTimer(task_definition.name);
       const evaluated_task_definition = await evaluateTemplate(task_definition, action_context);
+      execution_context.evaluated_tasks_definitions[evaluated_task_definition.name] = evaluated_task_definition;
       const task_metrics = action_context.tasks_metrics[evaluated_task_definition.name];
-      task_metrics.ms_since_action_start = action_timer(evaluated_task_definition.name);
-      const task_results = (action_context.tasks_results[evaluated_task_definition.name] = {});
       task_metrics.is_conditions_passed = (evaluated_task_definition.conditions ?? []).every((c) =>
         Boolean(c.expression)
       );
       if (!task_metrics.is_conditions_passed) continue;
+      const task_timer = precisionTimer(task_definition.name);
+      task_metrics.ms_since_action_start = action_timer(evaluated_task_definition.name);
+      const task_results = (action_context.tasks_results[evaluated_task_definition.name] = {});
       task_metrics.is_attempted = true;
+      // register a is_reverted callback
+      execution_context.on_error_callbacks.push(function () {
+        task_metrics.is_reverted = true;
+      });
       try {
         await task_functions[evaluated_task_definition.function](
           evaluated_task_definition,
@@ -80,30 +85,47 @@ export default async function (action_context, execution_context) {
         task_metrics.error = String(err);
       }
       task_metrics.execution_time_ms = task_timer("stop");
-      action_context.evaluated_tasks_definitions[evaluated_task_definition.name] = evaluated_task_definition;
       if (!task_metrics.is_success) {
         if (evaluated_task_definition.is_continue_if_error) {
           console.log(`🟡 - Task error but continuing: ${evaluated_task_definition.name}`);
         } else {
+          if (evaluated_task_definition.if_error_message) {
+            action_context.action_metrics.error_message = evaluated_task_definition.if_error_message;
+          } else {
+            action_context.action_metrics.error_message = `Task failed: ${evaluated_task_definition.name}`;
+          }
           throw "Task failed";
         }
       }
     }
 
-    // publish task results to a fanout exchange
-    for (const [task_name, task_results] of Object.entries(action_context.tasks_results)) {
-      const evaluated_task_definition = action_context.evaluated_tasks_definitions[task_name];
-      const task_function = evaluated_task_definition.function;
+    for (const [task_name, task_definition] of Object.entries(execution_context.evaluated_tasks_definitions)) {
+      // publish task_results to a fanout exchange
+      const task_results = action_context.tasks_results[task_name];
+      if (task_results) {
+        const exchange_name = `idc-tasks.${execution_context.client_settings.client_id}.${task_definition.function}`;
+        fanout_publish(
+          exchange_name,
+          JSON.stringify({
+            task_name,
+            task_results,
+            evaluated_task_definition: task_definition,
+          })
+        );
+      }
 
-      const exchange_name = `idc-tasks.${execution_context.client_settings.client_id}.${task_function}`;
-      fanout_publish(
-        exchange_name,
-        JSON.stringify({
-          task_name,
-          task_results,
-          evaluated_task_definition,
-        })
-      );
+      // remove secret task_results
+      if (task_definition.is_secret_task_results && action_context.tasks_results[task_name] !== undefined) {
+        delete action_context.tasks_results[task_name];
+      }
+
+      // secret task_definitions
+      if (task_definition.is_secret_task_definition) {
+        action_context.action_definition.tasks_definitions[task_name] = {
+          name: task_definition.name,
+          function: task_definition.function,
+        };
+      }
     }
 
     console.log(`🟢 - Action executed: ${action_context.idc_id}`);
@@ -126,10 +148,7 @@ export default async function (action_context, execution_context) {
 
   // create the action document in the database
   await execution_context.mongodb.collection("idc-actions").insertOne({
-    idc_id: action_context.idc_id,
-    action_metrics: action_context.action_metrics,
-    action_definition: action_context.action_definition,
-    tasks_metrics: action_context.tasks_metrics,
+    ...action_context,
     created_at: new Date(),
   });
 

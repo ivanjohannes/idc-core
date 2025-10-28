@@ -5,8 +5,9 @@ import { Db } from "mongodb";
  * @property {object} client_settings
  * @property {string} [client_settings.client_id]
  * @property {Db} [mongodb]
+ * @property {Record<string, TaskDefinition>} [evaluated_tasks_definitions]
  * @property {Array<Function>} [on_error_callbacks]
- */
+*/
 
 /**
  * @typedef {object} ActionContext
@@ -15,14 +16,13 @@ import { Db } from "mongodb";
  * @property {ActionMetrics} [action_metrics]
  * @property {Record<string, TaskMetrics>} [tasks_metrics]
  * @property {Record<string, TaskResults>} [tasks_results]
- * @property {import("mongodb").Document} [document]
- * @property {Record<string, TaskDefinition>} [evaluated_tasks_definitions]
 */
 
 /**
  * @typedef {object} ActionMetrics
  * @property {number} [execution_time_ms]
  * @property {boolean} [is_success]
+ * @property {string} [error_message]
  */
 
 /**
@@ -39,6 +39,8 @@ import { Db } from "mongodb";
  * @property {object} [conditions]
  * @property {boolean} [is_continue_if_error]
  * @property {TaskCondition[]} [conditions]
+ * @property {boolean} [is_secret_task_definition]
+ * @property {string} [is_secret_task_results]
  */
 
 /**

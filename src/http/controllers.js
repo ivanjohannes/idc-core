@@ -55,9 +55,10 @@ export async function action_controller(req, res) {
     // populate execution_context
     execution_context.client_settings = client_settings;
     execution_context.mongodb = mongodb_client.db(execution_context.client_settings.client_id);
-
+    
+    // set action_definition
     action_context.action_definition = req.body.action_definition;
-
+    
     // execute action
     await action(action_context, execution_context);
 

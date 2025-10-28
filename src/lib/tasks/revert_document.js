@@ -5,19 +5,19 @@ import {
 } from "../utils/index.js";
 
 /**
- * @description Deletes a document in the specified collection.
+ * @description Reverts a document to a specific version.
  * @param {import("../types/index.js").TaskDefinition} task_definition
  * @param {import("../types/index.js").TaskMetrics} task_metrics
  * @param {import("../types/index.js").TaskResults} task_results
  * @param {import("../types/index.js").ActionContext} action_context
  * @param {import("../types/index.js").ExecutionContext} execution_context
- * @returns {Promise<object>} - The result of the document deletion.
+ * @returns {Promise<object>} - The result of the document revert.
  */
 export default async function (task_definition, task_metrics, task_results, action_context, execution_context) {
   const lock_key = task_definition.params?.idc_id;
 
   async function task() {
-    const { idc_id } = task_definition.params;
+    const { idc_id, idc_version } = task_definition.params;
 
     // Validate input
     if (!idc_id) {
@@ -40,6 +40,31 @@ export default async function (task_definition, task_metrics, task_results, acti
             newRoot: {
               document: "$$ROOT",
             },
+          },
+        },
+        {
+          $lookup: {
+            from: versions_collection_name,
+            let: { document_idc_id: idc_id, idc_version: idc_version },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$document_idc_id", "$$document_idc_id"] },
+                      { $eq: ["$idc_version", "$$idc_version"] },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "revert_version",
+          },
+        },
+        {
+          $unwind: {
+            path: "$revert_version",
+            preserveNullAndEmptyArrays: true,
           },
         },
         {
@@ -71,63 +96,42 @@ export default async function (task_definition, task_metrics, task_results, acti
     const document_data = db_result[0];
 
     if (!document_data?.document) {
-      throw `Cannot delete document ${idc_id}: Document not found`;
+      throw `Cannot revert document ${idc_id}: Document not found`;
+    }
+
+    if (!document_data?.revert_version?.document) {
+      throw `Cannot revert document ${idc_id} to version ${idc_version}: Version not found`;
     }
 
     const doc_is_latest = document_data?.document?.idc_version > document_data?.latest_version?.idc_version;
-    let latest_document;
     if (doc_is_latest) {
-      latest_document = document_data.document;
-    } else {
-      // make it the latest document by updating its idc_version
-      latest_document = await execution_context.mongodb.collection(collection_name).findOneAndUpdate(
-        { idc_id },
-        {
-          $set: {
-            idc_version: (document_data?.latest_version?.idc_version || 0) + 1,
-            from_idc_version: document_data?.document?.idc_version || 0,
-            updatedAt: new Date(),
-          },
-        },
-        {
-          returnDocument: "after",
-        }
-      );
+      // must save version before revert
+      const version_result = await saveDocumentVersion(document_data.document, action_context, execution_context);
 
-      // set a callback to undo the change
+      // set a callback to delete the created version document
       execution_context.on_error_callbacks.push(async () => {
-        await execution_context.mongodb.collection(collection_name).findOneAndUpdate(
-          { idc_id },
-          {
-            $set: {
-              idc_version: document_data.document.idc_version,
-              from_idc_version: document_data.document.from_idc_version,
-            },
-          },
-          {
-            returnDocument: "after",
-          }
-        );
+        await execution_context.mongodb.collection(versions_collection_name).deleteOne({ idc_id: version_result.idc_id });
       });
     }
 
-    // save the document version
-    const version_result = await saveDocumentVersion(latest_document, action_context, execution_context);
+    // revert the document
+    const updated_document = await execution_context.mongodb.collection(collection_name).findOneAndUpdate(
+      { idc_id },
+      {
+        $set: document_data.revert_version.document,
+      },
+      {
+        returnDocument: "after",
+        upsert: true,
+      }
+    );
 
-    // set a callback to delete the created version document
-    execution_context.on_error_callbacks.push(async () => {
-      await execution_context.mongodb.collection(versions_collection_name).deleteOne({ idc_id: version_result.idc_id });
-    });
-
-    // delete the document
-    await execution_context.mongodb.collection(collection_name).deleteOne({ idc_id });
-
-    // set a callback to recreate the deleted document
+    // set a callback to restore to previous version
     execution_context.on_error_callbacks.push(async () => {
       await execution_context.mongodb.collection(collection_name).findOneAndUpdate(
         { idc_id },
         {
-          $set: latest_document,
+          $set: document_data.document,
         },
         {
           returnDocument: "after",
@@ -136,8 +140,7 @@ export default async function (task_definition, task_metrics, task_results, acti
       );
     });
 
-    task_results.is_document_deleted = true;
-    task_results.document = { idc_id };
+    task_results.document = updated_document;
 
     task_metrics.is_success = true;
   }

@@ -1,4 +1,4 @@
-import { generateIdcID, saveDocumentVersion } from "../utils/index.js";
+import { generateIdcID } from "../utils/index.js";
 
 /**
  * @description Creates a document in the specified collection.
@@ -10,10 +10,6 @@ import { generateIdcID, saveDocumentVersion } from "../utils/index.js";
  * @returns {Promise<object>} - The result of the document creation.
  */
 export default async function (task_definition, task_metrics, task_results, action_context, execution_context) {
-  // register a is_reverted callback
-  execution_context.on_error_callbacks.push(function () {
-    task_metrics.is_reverted = true;
-  });
 
   const { collection_name, payload } = task_definition.params;
 
@@ -34,6 +30,7 @@ export default async function (task_definition, task_metrics, task_results, acti
         ...payload,
         idc_id,
         idc_version: 1,
+        from_idc_version: 0,
         createdAt: timestamp,
         updatedAt: timestamp,
       },
@@ -47,15 +44,6 @@ export default async function (task_definition, task_metrics, task_results, acti
   // set a callback to delete the created document
   execution_context.on_error_callbacks.push(async () => {
     await execution_context.mongodb.collection(collection_name).deleteOne({ idc_id });
-  });
-  
-  // update the document version
-  const version_result = await saveDocumentVersion(idc_id, action_context, execution_context);
-
-
-  // set a callback to delete the created version document
-  execution_context.on_error_callbacks.push(async () => {
-    await execution_context.mongodb.collection("idc-versions").deleteOne({ idc_id: version_result.idc_id });
   });
 
   task_results.document = document;

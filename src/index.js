@@ -1,5 +1,5 @@
 import config from "./config.js";
-import http_app from "./http/index.js";
+import http from "./http/index.js";
 import mongodb_client from "./mongodb/index.js";
 
 try {
@@ -59,7 +59,7 @@ try {
 // HTTP server
 if (config.http.port) {
   await new Promise((resolve) => {
-    http_app.listen(config.http.port, (err) => {
+    http.listen(config.http.port, (err) => {
       if (err) {
         console.error(`🔴 - HTTP failed to start:`, err);
         process.exit(1);
@@ -68,6 +68,8 @@ if (config.http.port) {
       resolve();
     });
   });
+
+  await import("./websocket/index.js");
 } else {
   console.error("🔴 - HTTP_PORT is not defined in the environment variables.");
   process.exit(1);

@@ -1,8 +1,23 @@
 import express from "express";
-import router from "./routes.js";
+import { createServer } from "http";
+import { attachClientSettings } from "./middleware.js";
+import { action_controller, jwks_controller, ping_controller, task_controller } from "./controllers.js";
 
-const http_app = express();
+const app = express();
 
-http_app.use(router);
+// MIDDLEWARE
+app.use(express.json());
+app.use(attachClientSettings)
+// END MIDDLEWARE
 
-export default http_app;
+// ROUTES
+app.get("/jwks.json", jwks_controller);
+app.get("/ping", ping_controller);
+app.post("/task", task_controller);
+app.post("/action", action_controller);
+// END ROUTES
+
+// HTTP Server
+const http = createServer(app);
+
+export default http;

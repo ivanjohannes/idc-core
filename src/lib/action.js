@@ -53,12 +53,12 @@ export default async function (action_context, execution_context) {
 
     // set tasks_results to {}
     action_context.tasks_results = {};
-    execution_context.evaluated_tasks_definitions = {};
+    action_context.evaluated_tasks_definitions = {};
 
     // execute tasks_definitions in order
     for (const task_definition of ordered_task_definitions) {
       const evaluated_task_definition = await evaluateTemplate(task_definition, action_context);
-      execution_context.evaluated_tasks_definitions[evaluated_task_definition.name] = evaluated_task_definition;
+      action_context.evaluated_tasks_definitions[evaluated_task_definition.name] = evaluated_task_definition;
       const task_metrics = action_context.tasks_metrics[evaluated_task_definition.name];
       task_metrics.is_conditions_passed = (evaluated_task_definition.conditions ?? []).every((c) =>
         Boolean(c.expression)
@@ -99,7 +99,7 @@ export default async function (action_context, execution_context) {
       }
     }
 
-    for (const [task_name, task_definition] of Object.entries(execution_context.evaluated_tasks_definitions)) {
+    for (const [task_name, task_definition] of Object.entries(action_context.evaluated_tasks_definitions)) {
       // publish task_results to a fanout exchange
       const task_results = action_context.tasks_results[task_name];
       if (task_results) {
@@ -148,7 +148,10 @@ export default async function (action_context, execution_context) {
 
   // create the action document in the database
   await execution_context.mongodb.collection("idc-actions").insertOne({
-    ...action_context,
+    idc_id: action_context.idc_id,
+    action_definition: action_context.action_definition,
+    action_metrics: action_context.action_metrics,
+    tasks_metrics: action_context.tasks_metrics,
     created_at: new Date(),
   });
 

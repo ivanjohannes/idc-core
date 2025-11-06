@@ -1,3 +1,4 @@
+import config from "../config.js";
 import action from "../lib/action.js";
 import mongodb_client from "../mongodb/index.js";
 
@@ -8,6 +9,17 @@ export async function ping_controller(req, res) {
     res.status(200).send("idc-core is alive!");
   } catch (err) {
     console.error("🔴 - Error occurred in ping_controller:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function jwks_controller(req, res) {
+  try {
+    console.log("🟢 - JWKS request received");
+
+    res.json({ keys: config.jwt_keys.jwks });
+  } catch (err) {
+    console.error("🔴 - Error occurred in jwks_controller:", err);
     res.status(500).json({ error: err.message });
   }
 }

@@ -160,7 +160,7 @@ export function executeWithRedisLock(lock_key, execution_context, func) {
       throw err;
     } finally {
       clearInterval(interval);
-      await redlock.release(lock)
+      await redlock.release(lock);
     }
   };
 }

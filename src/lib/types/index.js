@@ -3,9 +3,13 @@ import { Db } from "mongodb";
 /**
  * @typedef {object} ExecutionContext
  * @property {object} client_settings
+ * @property {string} [client_settings.name]
  * @property {string} [client_settings.client_id]
+ * @property {string} [client_settings.environment_idc_id]
+ * @property {object} [client_settings.environment_settings]
+ * @property {string} [client_settings.environment_settings.name]
+ * @property {string} [client_settings.environment_settings.idc_core_url]
  * @property {Db} [mongodb]
- * @property {Record<string, TaskDefinition>} [evaluated_tasks_definitions]
  * @property {Array<Function>} [on_error_callbacks]
 */
 
@@ -14,6 +18,7 @@ import { Db } from "mongodb";
  * @property {ActionDefinition} action_definition
  * @property {string} [idc_id]
  * @property {ActionMetrics} [action_metrics]
+ * @property {Record<string, TaskDefinition>} [evaluated_tasks_definitions]
  * @property {Record<string, TaskMetrics>} [tasks_metrics]
  * @property {Record<string, TaskResults>} [tasks_results]
 */

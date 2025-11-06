@@ -24,8 +24,6 @@ export async function attachClientSettings(req, res, next) {
 
     req.client_settings = decoded_token.client_settings;
   } catch (err) {
-    console.error("Error attaching client settings:", err.message);
-    
   } finally {
     next();
   }

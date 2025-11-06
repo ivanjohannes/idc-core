@@ -38,8 +38,6 @@ try {
   process.exit(1);
 }
 
-console.log(jwt_keys.jwk.kid)
-
 export default {
   show_timer_logs: process.env.SHOW_TIMER_LOGS === "true",
   idc_gateway: {

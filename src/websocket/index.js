@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import http from "../http/index.js";
 
-// Socket.IO on the primary service
+// Socket.IO on the core service
 const io = new Server(http, {
   cors: {
     origin: "*", // allow all because gateway may forward unknown origins
@@ -10,7 +10,7 @@ const io = new Server(http, {
 });
 
 io.on("connection", (socket) => {
-  console.log("[Primary] Client connected:", socket.id);
+  console.log("[Core] Client connected:", socket.id);
 
   socket.on("message", (msg) => {
     console.log("[Primary] Received:", msg);

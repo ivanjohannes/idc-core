@@ -2,7 +2,6 @@ export { default as aggregation } from "./aggregation.js";
 export { default as create_document } from "./create_document.js";
 export { default as delete_document } from "./delete_document.js";
 export { default as error } from "./error.js";
-export { default as approve_websocket_connection } from "./approve_websocket_connection.js";
 export { default as http_request } from "./http_request.js";
 export { default as restore_document } from "./restore_document.js";
 export { default as revert_document } from "./revert_document.js";

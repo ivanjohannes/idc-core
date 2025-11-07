@@ -25,21 +25,39 @@ export default async function (task_definition, task_metrics, task_results, acti
     const nsp = io.of(formatted_namespace);
 
     nsp.on("connection", (socket) => {
-      console.log(`[WebSocket] Client connected to namespace ${formatted_namespace}:`, socket.id);
-
-      socket.emit("pingpong", "ping");
-
       socket.on("pingpong", (msg) => {
-        console.log("Received from client:", msg);
+        console.log("Message from client:", msg);
         if (msg === "ping") {
           socket.emit("pingpong", "pong");
         }
       });
     });
 
-    nsp.use((socket, next) => {
-      console.log(`[WebSocket] Middleware for namespace ${formatted_namespace} - Socket ID:`, socket.id);
-      next();
+    nsp.use(async (socket, next) => {
+      const token = socket.handshake.auth.token;
+
+      try {
+        const verified_token = await new Promise((resolve, reject) => {
+          jwt.verify(token, config.jwt_keys.public, { algorithms: ["RS256"] }, (err, decoded) => {
+            if (err) return reject(err);
+            resolve(decoded);
+          });
+        });
+
+        if (verified_token.sub !== client_id) {
+          throw new Error("Invalid token subject");
+        }
+
+        if (verified_token.namespace !== formatted_namespace) {
+          throw new Error("Invalid token namespace");
+        }
+
+        next();
+      } catch (err) {
+        next(new Error("Authentication error"));
+
+        socket.disconnect(true);
+      }
     });
   }
 
@@ -58,6 +76,7 @@ export default async function (task_definition, task_metrics, task_results, acti
   );
 
   task_results.url = config.idc_gateway.url + formatted_namespace;
+  task_results.client_id = client_id;
 
   task_metrics.is_success = true;
 }

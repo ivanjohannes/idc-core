@@ -9,3 +9,4 @@ export { default as revert_document } from "./revert_document.js";
 export { default as string_to_hash } from "./string_to_hash.js";
 export { default as success } from "./success.js";
 export { default as update_document } from "./update_document.js";
+export { default as ws_approve_connection } from "./ws_approve_connection.js";

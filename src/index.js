@@ -1,6 +1,4 @@
 import config from "./config.js";
-import http from "./http/index.js";
-import mongodb_client from "./mongodb/index.js";
 
 try {
   console.log("🟡 - idc-core starting");
@@ -31,6 +29,7 @@ try {
 
   // MongoDB connection
   if (config.mongodb.url) {
+    const mongodb_client = await import("./mongodb/index.js").then((mod) => mod.default);
     await mongodb_client
       .connect()
       .then(() => {
@@ -56,25 +55,25 @@ try {
   }
   // END RabbitMQ connection
 
-// HTTP server
-if (config.http.port) {
-  await new Promise((resolve) => {
-    http.listen(config.http.port, (err) => {
-      if (err) {
-        console.error(`🔴 - HTTP failed to start:`, err);
-        process.exit(1);
-      }
-      console.log(`🟢 - HTTP listening on port ${config.http.port}`);
-      resolve();
+  // HTTP server
+  if (config.http.port) {
+    await import("./websocket/index.js");
+    const http = await import("./http/index.js").then((mod) => mod.default);
+    await new Promise((resolve) => {
+      http.listen(config.http.port, (err) => {
+        if (err) {
+          console.error(`🔴 - HTTP failed to start:`, err);
+          process.exit(1);
+        }
+        console.log(`🟢 - HTTP listening on port ${config.http.port}`);
+        resolve();
+      });
     });
-  });
-
-  await import("./websocket/index.js");
-} else {
-  console.error("🔴 - HTTP_PORT is not defined in the environment variables.");
-  process.exit(1);
-}
-// END HTTP server
+  } else {
+    console.error("🔴 - HTTP_PORT is not defined in the environment variables.");
+    process.exit(1);
+  }
+  // END HTTP server
 
   console.log("🟢 - idc-core started");
 } catch (err) {

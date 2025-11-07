@@ -9,15 +9,6 @@ const io = new Server(http, {
   },
 });
 
-io.on("connection", (socket) => {
-  console.log("[Core] Client connected:", socket.id);
-
-  socket.on("message", (msg) => {
-    console.log("[Primary] Received:", msg);
-    socket.emit("reply", `Primary echoes: ${msg}`);
-  });
-});
-
 console.log("🟢 - WebSocket server initialized");
 
 export default io;

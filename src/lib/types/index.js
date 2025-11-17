@@ -44,7 +44,6 @@ import { Db } from "mongodb";
  * @property {object} [conditions]
  * @property {boolean} [is_continue_if_error]
  * @property {TaskCondition[]} [conditions]
- * @property {boolean} [is_secret_task_definition]
  * @property {string} [is_secret_task_results]
  */
 

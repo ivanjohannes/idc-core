@@ -120,12 +120,10 @@ export default async function (action_context, execution_context) {
       }
 
       // secret task_definitions
-      if (task_definition.is_secret_task_definition) {
-        action_context.action_definition.tasks_definitions[task_name] = {
-          name: task_definition.name,
-          function: task_definition.function,
-        };
-      }
+      action_context.action_definition.tasks_definitions[task_name] = {
+        name: task_definition.name,
+        function: task_definition.function,
+      };
     }
 
     console.log(`🟢 - Action executed: ${action_context.idc_id}`);

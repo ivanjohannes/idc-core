@@ -25,6 +25,15 @@ export function precisionTimer(name = "unnamed", is_silent = !config.show_timer_
 }
 
 /**
+ * Creates a hash from a string
+ * @param {string} unhashed_string
+ * @returns {string}
+ */
+export function createHash(unhashed_string) {
+  return crypto.createHash("sha256").update(unhashed_string).digest("hex")
+}
+
+/**
  * @description Generates a random string of specified length.
  * @param {number} length - The length of the random string to generate.
  * @returns {string} - The generated random string.

@@ -1,5 +1,5 @@
-import crypto from "crypto";
 import _ from "lodash";
+import { createHash } from "../utils/index.js";
 
 /**
  * @description Creates a hash of a string.
@@ -14,7 +14,7 @@ export default async function (task_definition, task_metrics, task_results, acti
 
   const unhashed_string = task_definition.params?.unhashed_string;
 
-  const hashed_string = crypto.createHash("sha256").update(unhashed_string).digest("hex");
+  const hashed_string = createHash(unhashed_string)
 
   _.set(task_results, "hashed_string", hashed_string);
 

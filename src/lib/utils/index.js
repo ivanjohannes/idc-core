@@ -3,6 +3,7 @@ import config from "../../config.js";
 import jsonata from "jsonata";
 import Handlebars from "handlebars";
 import redlock from "../../redis/redlock.js";
+import jwt from "jsonwebtoken";
 
 /**
  * @description Timer function to precisely time operations.
@@ -163,4 +164,29 @@ export function executeWithRedisLock(lock_key, execution_context, func) {
       await redlock.release(lock);
     }
   };
+}
+
+/**
+ * @description Verifies a JWT token
+ * @param {string} token
+ * @param {string} client_id
+ * @returns {Promise<object|null>} - The verified token payload or null if verification fails.
+ */
+export async function verifyJWT(token, client_id) {
+  try {
+    const verified_token = await new Promise((resolve, reject) => {
+      jwt.verify(token, config.jwt_keys.public, { algorithms: ["RS256"] }, (err, decoded) => {
+        if (err) return reject(err);
+        resolve(decoded);
+      });
+    });
+
+    if (verified_token.sub !== client_id) {
+      throw new Error("Invalid token subject");
+    }
+
+    return verified_token;
+  } catch (err) {
+    return null;
+  }
 }

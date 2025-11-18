@@ -119,14 +119,14 @@ export default async function (action_context, execution_context) {
         delete action_context.tasks_results[task_name];
       }
 
-      // secret task_definitions
+      // task_definitions
       action_context.action_definition.tasks_definitions[task_name] = {
         name: task_definition.name,
         function: task_definition.function,
       };
     }
 
-    console.log(`🟢 - Action executed: ${action_context.idc_id}`);
+    console.log(`🟢 - Action executed`);
   } catch (err) {
     console.error("🔴 - Action error:", err);
     action_context.action_metrics.is_success = false;

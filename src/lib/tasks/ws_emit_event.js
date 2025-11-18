@@ -1,5 +1,3 @@
-import config from "../../config.js";
-import jwt from "jsonwebtoken";
 import io from "../../websocket/index.js";
 
 /**

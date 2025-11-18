@@ -4,6 +4,8 @@ import jsonata from "jsonata";
 import Handlebars from "handlebars";
 import redlock from "../../redis/redlock.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import redis_client from "../../redis/index.js";
 
 /**
  * @description Timer function to precisely time operations.
@@ -20,6 +22,18 @@ export function precisionTimer(name = "unnamed", is_silent = !config.show_timer_
     if (!is_silent) console.log(`⚪ - ${tick_name} timer ${name} - since start: ${msSinceStart}ms`);
     return msSinceStart;
   };
+}
+
+/**
+ * @description Generates a random string of specified length.
+ * @param {number} length - The length of the random string to generate.
+ * @returns {string} - The generated random string.
+ */
+export function generateRandomString(length = 20) {
+  return crypto
+    .randomBytes(Math.ceil(length / 2))
+    .toString("hex")
+    .slice(0, length);
 }
 
 /**
@@ -185,7 +199,24 @@ export async function verifyJWT(token, client_id) {
       throw new Error("Invalid token subject");
     }
 
-    return verified_token;
+    const redis_key = `${client_id}:tokens:${verified_token.jti}`;
+    const token_status = await redis_client.get(redis_key);
+
+    if (token_status === "active") {
+      return verified_token;
+    } else if (!isNaN(parseInt(token_status, 10))) {
+      const remaining_uses = await redis_client.decr(redis_key);
+      if (remaining_uses <= 0) {
+        await redis_client.del(redis_key);
+      }
+      if (remaining_uses < 0) {
+        return null;
+      } else {
+        return verified_token;
+      }
+    }
+
+    return null;
   } catch (err) {
     return null;
   }
